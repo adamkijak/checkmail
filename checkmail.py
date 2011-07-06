@@ -1,9 +1,11 @@
-#!/usr/bin/pythonn
+#!/usr/bin/python
 # -*- coding: UTF-8 -*-
-from poplib import POP3_SSL
+from email import message_from_string
 from email.header import decode_header
-from re import findall,sub
 from pickle import dumps,loads
+from poplib import POP3_SSL
+from re import findall,sub
+from string import join
 
 USER = ''
 PASSWORD = ''
@@ -23,24 +25,27 @@ class Checkmail:
 	def print_msg(self,msg_num):
 
 		def header_decode(coded_header):
-			header = coded_header	
+			try:
+				header = coded_header.replace('\n','')
+			except:
+				header = ''
 			parts = findall('=\?.*\?=',header)
 			for c in parts:
 				decoded_header = decode_header(c)[0]
 				header = sub('=\?.*\?=',decoded_header[0],header)
-				header = unicode(header,decoded_header[1])
+				try:
+					header = unicode(header,decoded_header[1])
+				except:
+					pass
 			return header
 			
-		msg = self._client.top(msg_num,0)[1]
+		msg = join(self._client.top(msg_num,0)[1],'\n')
+		msg = message_from_string(msg)
 		msg_date, msg_from, msg_subject = ('','','')
-		for line in msg:
-			if line.startswith('From:'):
-				msg_from = header_decode(line)
-			elif line.startswith('Subject:'):
-				msg_subject = header_decode(line)
-			elif line.startswith('Date:'):
-				msg_date = line
-		print '%s\n%s\n%s\n' % (msg_from,msg_subject,msg_date,)
+		msg_from = header_decode(msg["from"])
+		msg_subject = header_decode(msg["subject"])
+		msg_date = header_decode(msg["date"])
+		print 'From: %s\nSubject: %s\nDate: %s\n' % (msg_from,msg_subject,msg_date,)
 
 
 	def check(self):
